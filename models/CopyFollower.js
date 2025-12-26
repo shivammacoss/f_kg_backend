@@ -116,7 +116,6 @@ copyFollowerSchema.methods.checkRiskLimits = function() {
 
 // Indexes
 copyFollowerSchema.index({ masterId: 1, userId: 1 }, { unique: true });
-copyFollowerSchema.index({ userId: 1 });
 copyFollowerSchema.index({ status: 1 });
 
 module.exports = mongoose.model('CopyFollower', copyFollowerSchema);

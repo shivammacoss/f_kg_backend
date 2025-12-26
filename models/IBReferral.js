@@ -58,9 +58,8 @@ const ibReferralSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes
+// Indexes (referredUserId already has unique:true which creates index)
 ibReferralSchema.index({ ibId: 1 });
-ibReferralSchema.index({ referredUserId: 1 });
 ibReferralSchema.index({ ibUserId: 1 });
 ibReferralSchema.index({ status: 1 });
 

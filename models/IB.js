@@ -105,10 +105,7 @@ ibSchema.methods.getReferralLink = function(baseUrl = 'https://Forex KG.com') {
   return `${baseUrl}/register?ref=${this.ibId}`;
 };
 
-// Indexes
-ibSchema.index({ userId: 1 });
-ibSchema.index({ ibId: 1 });
-ibSchema.index({ referralCode: 1 });
+// Indexes (userId, ibId, referralCode already have unique:true which creates indexes)
 ibSchema.index({ status: 1 });
 
 module.exports = mongoose.model('IB', ibSchema);

@@ -124,9 +124,7 @@ tradeMasterSchema.methods.updateStats = function() {
   this.stats.winRate = total > 0 ? Math.round((this.stats.winningTrades / total) * 100) : 0;
 };
 
-// Indexes
-tradeMasterSchema.index({ userId: 1 });
+// Indexes (userId and masterId already have unique:true which creates indexes)
 tradeMasterSchema.index({ status: 1 });
-tradeMasterSchema.index({ masterId: 1 });
 
 module.exports = mongoose.model('TradeMaster', tradeMasterSchema);

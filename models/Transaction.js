@@ -116,9 +116,8 @@ transactionSchema.pre('save', function(next) {
   next();
 });
 
-// Index for faster queries
+// Index for faster queries (reference already has unique:true which creates index)
 transactionSchema.index({ user: 1, createdAt: -1 });
 transactionSchema.index({ status: 1 });
-transactionSchema.index({ reference: 1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

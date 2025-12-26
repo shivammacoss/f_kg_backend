@@ -74,9 +74,8 @@ supportTicketSchema.pre('save', async function(next) {
   next();
 });
 
-// Index for efficient queries
+// Index for efficient queries (ticketId already has unique:true which creates index)
 supportTicketSchema.index({ userId: 1, status: 1 });
 supportTicketSchema.index({ status: 1, createdAt: -1 });
-supportTicketSchema.index({ ticketId: 1 });
 
 module.exports = mongoose.model('SupportTicket', supportTicketSchema);

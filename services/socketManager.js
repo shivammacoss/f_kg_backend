@@ -7,7 +7,14 @@ class SocketManager {
     // Optimized Socket.IO for low latency
     this.io = new Server(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+        origin: [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://localhost:5173',
+          'http://127.0.0.1:5173',
+          'https://forexkg.vercel.app',
+          /\.vercel\.app$/
+        ],
         methods: ['GET', 'POST'],
         credentials: true
       },
