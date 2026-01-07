@@ -91,6 +91,20 @@ const transactionSchema = new mongoose.Schema({
     default: ''
   },
   
+  // Bonus tracking
+  bonusAmount: {
+    type: Number,
+    default: 0
+  },
+  bonusPercent: {
+    type: Number,
+    default: 0
+  },
+  isFirstDeposit: {
+    type: Boolean,
+    default: false
+  },
+  
   metadata: {
     type: mongoose.Schema.Types.Mixed,
     default: {}

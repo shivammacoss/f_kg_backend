@@ -4,6 +4,7 @@ const { body, validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const UserBankAccount = require('../models/UserBankAccount');
 const BankSettings = require('../models/BankSettings');
+const BonusSettings = require('../models/BonusSettings');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
@@ -363,12 +364,82 @@ router.get('/balance', async (req, res) => {
       success: true,
       data: {
         balance: user.balance,
+        bonusBalance: user.bonusBalance || 0,
+        totalBonusReceived: user.totalBonusReceived || 0,
+        tradingVolumeForBonus: user.tradingVolumeForBonus || 0,
+        totalEquity: user.balance + (user.bonusBalance || 0),
         pendingDeposits,
         pendingWithdrawals
       }
     });
   } catch (error) {
     console.error('Get balance error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/wallet/bonus-preview
+// @desc    Get bonus preview for a deposit amount
+// @access  Private
+router.get('/bonus-preview', async (req, res) => {
+  try {
+    const { amount } = req.query;
+    const depositAmount = parseFloat(amount) || 0;
+    
+    if (depositAmount <= 0) {
+      return res.json({
+        success: true,
+        data: {
+          bonusAmount: 0,
+          bonusPercent: 0,
+          isFirstDeposit: false,
+          bonusEnabled: false
+        }
+      });
+    }
+    
+    const bonusSettings = await BonusSettings.getSettings();
+    
+    // Check if this would be user's first deposit
+    const previousDeposits = await Transaction.countDocuments({
+      user: req.user._id,
+      type: 'deposit',
+      status: 'completed'
+    });
+    const isFirstDeposit = previousDeposits === 0;
+    
+    // Calculate bonus
+    const bonusAmount = bonusSettings.calculateBonus(depositAmount, isFirstDeposit);
+    
+    // Determine bonus percent
+    let bonusPercent = 0;
+    if (bonusAmount > 0) {
+      if (isFirstDeposit && bonusSettings.firstDepositBonusEnabled) {
+        bonusPercent = bonusSettings.firstDepositBonusPercent;
+      } else if (bonusSettings.useTierBonus) {
+        const tier = bonusSettings.bonusTiers.find(t => 
+          t.isActive && 
+          depositAmount >= t.minDeposit && 
+          depositAmount <= t.maxDeposit
+        );
+        bonusPercent = tier ? tier.bonusPercent : 0;
+      } else {
+        bonusPercent = bonusSettings.regularBonusPercent;
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        bonusAmount,
+        bonusPercent,
+        isFirstDeposit,
+        bonusEnabled: bonusSettings.isEnabled,
+        minDepositForBonus: bonusSettings.minDepositForBonus
+      }
+    });
+  } catch (error) {
+    console.error('Get bonus preview error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

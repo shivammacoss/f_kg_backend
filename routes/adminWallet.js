@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const BankSettings = require('../models/BankSettings');
+const BonusSettings = require('../models/BonusSettings');
 const User = require('../models/User');
 const { protectAdmin } = require('./adminAuth');
 
@@ -117,7 +118,7 @@ router.get('/deposits', async (req, res) => {
 // @access  Admin
 router.put('/deposits/:id/approve', async (req, res) => {
   try {
-    const { adminNote } = req.body;
+    const { adminNote, skipBonus } = req.body;
     
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) {
@@ -135,6 +136,59 @@ router.put('/deposits/:id/approve', async (req, res) => {
     // Update user balance
     const user = await User.findById(transaction.user);
     const balanceBefore = user.balance;
+    
+    // Calculate bonus
+    let bonusAmount = 0;
+    let bonusPercent = 0;
+    let isFirstDeposit = false;
+    
+    if (!skipBonus) {
+      const bonusSettings = await BonusSettings.getSettings();
+      
+      // Check if this is user's first deposit
+      const previousDeposits = await Transaction.countDocuments({
+        user: transaction.user,
+        type: 'deposit',
+        status: 'completed'
+      });
+      isFirstDeposit = previousDeposits === 0;
+      
+      // Debug logging
+      console.log('[Bonus] Settings:', {
+        isEnabled: bonusSettings.isEnabled,
+        regularBonusPercent: bonusSettings.regularBonusPercent,
+        firstDepositBonusEnabled: bonusSettings.firstDepositBonusEnabled,
+        firstDepositBonusPercent: bonusSettings.firstDepositBonusPercent,
+        minDepositForBonus: bonusSettings.minDepositForBonus,
+        useTierBonus: bonusSettings.useTierBonus
+      });
+      console.log('[Bonus] Deposit:', { amount: transaction.amount, isFirstDeposit, previousDeposits });
+      
+      // Calculate bonus amount
+      bonusAmount = bonusSettings.calculateBonus(transaction.amount, isFirstDeposit);
+      console.log('[Bonus] Calculated bonus:', bonusAmount);
+      
+      if (bonusAmount > 0) {
+        // Determine which bonus percent was applied
+        if (isFirstDeposit && bonusSettings.firstDepositBonusEnabled) {
+          bonusPercent = bonusSettings.firstDepositBonusPercent;
+        } else if (bonusSettings.useTierBonus) {
+          const tier = bonusSettings.bonusTiers.find(t => 
+            t.isActive && 
+            transaction.amount >= t.minDeposit && 
+            transaction.amount <= t.maxDeposit
+          );
+          bonusPercent = tier ? tier.bonusPercent : 0;
+        } else {
+          bonusPercent = bonusSettings.regularBonusPercent;
+        }
+        
+        // Add bonus to user's bonus balance
+        user.bonusBalance += bonusAmount;
+        user.totalBonusReceived += bonusAmount;
+      }
+    }
+    
     user.balance += transaction.amount;
     await user.save();
 
@@ -142,6 +196,9 @@ router.put('/deposits/:id/approve', async (req, res) => {
     transaction.status = 'completed';
     transaction.balanceBefore = balanceBefore;
     transaction.balanceAfter = user.balance;
+    transaction.bonusAmount = bonusAmount;
+    transaction.bonusPercent = bonusPercent;
+    transaction.isFirstDeposit = isFirstDeposit;
     transaction.processedAt = new Date();
     transaction.processedBy = req.admin._id;
     if (adminNote) transaction.adminNote = adminNote;
@@ -149,8 +206,17 @@ router.put('/deposits/:id/approve', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Deposit approved successfully',
-      data: transaction
+      message: bonusAmount > 0 
+        ? `Deposit approved with $${bonusAmount.toFixed(2)} bonus (${bonusPercent}%)`
+        : 'Deposit approved successfully',
+      data: {
+        ...transaction.toObject(),
+        bonusApplied: bonusAmount > 0,
+        bonusAmount,
+        bonusPercent,
+        newBalance: user.balance,
+        newBonusBalance: user.bonusBalance
+      }
     });
   } catch (error) {
     console.error('Approve deposit error:', error);

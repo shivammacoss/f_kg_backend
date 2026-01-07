@@ -26,6 +26,7 @@ const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/adminSupport');
 const adminChargesRoutes = require('./routes/adminCharges');
 const adminTradesRoutes = require('./routes/adminTrades');
+const adminBonusRoutes = require('./routes/adminBonus');
 
 const app = express();
 const server = http.createServer(app);
@@ -70,6 +71,7 @@ app.use('/api/admin/ib', adminIBRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/admin/charges', adminChargesRoutes);
 app.use('/api/admin/trades', adminTradesRoutes);
+app.use('/api/admin/bonus', adminBonusRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check

@@ -34,6 +34,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  bonusBalance: {
+    type: Number,
+    default: 0
+  },
+  totalBonusReceived: {
+    type: Number,
+    default: 0
+  },
+  tradingVolumeForBonus: {
+    type: Number,
+    default: 0
+  },
   isActive: {
     type: Boolean,
     default: true
